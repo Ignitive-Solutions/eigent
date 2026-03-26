@@ -223,7 +223,7 @@ async def google_callback(request: Request, code: str | None = None, db_session:
     user = User.by(User.email == google_email, s=db_session).one_or_none()
     if not user:
         google_name = userinfo.get("name", "")
-        google_picture = userinfo.get("picture", "")
+        google_picture = userinfo.get("picture", "")[:256] or ""
         try:
             user = User(
                 email=google_email,
@@ -239,8 +239,10 @@ async def google_callback(request: Request, code: str | None = None, db_session:
             logger.info("User created via Google OAuth", extra={"user_id": user.id, "email": google_email})
         except Exception as e:
             db_session.rollback()
-            logger.error("Failed to create user from Google OAuth", extra={"error": str(e)}, exc_info=True)
-            raise HTTPException(status_code=500, detail="Failed to create user account")
+            logger.error(f"Failed to create user from Google OAuth: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to create user account: {e}")
 
     if user.status == Status.Block:
         raise HTTPException(status_code=403, detail="Your account has been blocked.")
