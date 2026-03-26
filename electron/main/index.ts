@@ -43,6 +43,7 @@ import {
   checkToolInstalled,
   findAvailablePort,
   killProcessOnPort,
+  readEnvValue,
   startBackend,
 } from './init';
 import {
@@ -76,6 +77,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MAIN_DIST = path.join(__dirname, '../..');
 const RENDERER_DIST = path.join(MAIN_DIST, 'dist');
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+
+// Cloud mode: when VITE_USE_LOCAL_PROXY is not 'true', skip local Python backend
+const isCloudMode = (): boolean => {
+  if (process.env.VITE_USE_LOCAL_PROXY === 'true') return false;
+  const devEnvPath = path.join(MAIN_DIST, '.env.development');
+  return readEnvValue(devEnvPath, 'VITE_USE_LOCAL_PROXY') !== 'true';
+};
 const VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(MAIN_DIST, 'public')
   : RENDERER_DIST;
@@ -2993,7 +3001,7 @@ async function createWindow() {
   });
 
   // Handle localStorage based on installation state
-  if (needsInstallation) {
+  if (needsInstallation && !isCloudMode()) {
     log.info(
       'Installation needed - resetting initState to carousel while preserving auth data'
     );
@@ -3110,6 +3118,20 @@ async function createWindow() {
 
   // Wait for React components to mount and register event listeners
   await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Cloud mode: skip local deps install + backend, send ready events directly
+  if (isCloudMode()) {
+    log.info('[CLOUD MODE] Skipping local backend — using remote server');
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('install-dependencies-complete', {
+        success: true,
+        code: 0,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      win.webContents.send('backend-ready', { success: true, port: 0 });
+    }
+    return;
+  }
 
   // Now check and install dependencies
   let res: PromiseReturnType = await checkAndInstallDepsOnUpdate({ win });

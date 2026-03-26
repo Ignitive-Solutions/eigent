@@ -168,6 +168,15 @@ export const useInstallationSetup = () => {
 
     hasCheckedOnMount.current = true;
 
+    // Cloud mode: no local backend needed — mark everything ready immediately
+    if (import.meta.env.VITE_USE_LOCAL_PROXY !== 'true') {
+      installationCompleted.current = true;
+      backendReady.current = true;
+      setSuccess();
+      setInitState('done');
+      return;
+    }
+
     const checkToolInstalled = async () => {
       try {
         const result = await window.ipcRenderer.invoke('check-tool-installed');

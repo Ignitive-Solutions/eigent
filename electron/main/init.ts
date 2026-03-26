@@ -42,7 +42,7 @@ const execAsync = promisify(exec);
 
 const DEFAULT_SERVER_URL = 'https://dev.eigent.ai/api';
 
-function readEnvValue(filePath: string, key: string): string | undefined {
+export function readEnvValue(filePath: string, key: string): string | undefined {
   try {
     if (!fs.existsSync(filePath)) return undefined;
     const content = fs.readFileSync(filePath, 'utf-8');
