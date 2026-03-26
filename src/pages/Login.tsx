@@ -351,8 +351,11 @@ export default function Login() {
       <Button
         onClick={() => {
           setIsLoading(true);
+          const proxyUrl = import.meta.env.DEV
+            ? import.meta.env.VITE_PROXY_URL
+            : import.meta.env.VITE_BASE_URL;
           window.open(
-            `https://www.eigent.ai/signin?callbackUrl=${encodeURIComponent(callbackUrl || 'eigent://auth/callback')}`,
+            `${proxyUrl}/api/v1/user/google-auth`,
             '_blank',
             'noopener,noreferrer'
           );
