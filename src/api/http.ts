@@ -26,11 +26,12 @@ export async function getBaseURL() {
   if (baseUrl) {
     return baseUrl;
   }
-  // Cloud mode: route through server proxy instead of local backend
+  // Cloud mode: route through server's backend proxy (/api/v1 → backend)
   if (import.meta.env.VITE_USE_LOCAL_PROXY !== 'true') {
-    baseUrl = import.meta.env.DEV
+    const proxyBase = import.meta.env.DEV
       ? import.meta.env.VITE_PROXY_URL
       : import.meta.env.VITE_BASE_URL;
+    baseUrl = `${proxyBase}/api/v1`;
     return baseUrl;
   }
   const port = await window.ipcRenderer.invoke('get-backend-port');
