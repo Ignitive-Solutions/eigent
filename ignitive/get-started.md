@@ -26,13 +26,6 @@ Wait until both containers are healthy:
 docker compose -f docker-compose.dev.yml ps
 ```
 
-If the containers keep restarting, or you see "database eigent does not exist" later, reset the volumes:
-
-```bash
-docker compose -f docker-compose.dev.yml down -v
-docker compose -f docker-compose.dev.yml up -d
-```
-
 ### Step 2 — Configure the server
 
 ```bash
@@ -54,29 +47,22 @@ uv run alembic upgrade head
 cd ..
 ```
 
-### Step 3 — Start server + backend in tmux
-
-Using tmux keeps them running even if your SSH session drops.
+### Step 3 — Start server + backend 
 
 ```bash
-tmux new -s ignitive
-
+# Launch backend server
 cd server
-nohup uv run uvicorn main:api --port 8001 --reload > /tmp/server.log 2>&1 &
-cd ../backend
-nohup uv run uvicorn main:api --port 8002 --reload > /tmp/backend.log 2>&1 &
-```
+uv run uvicorn main:api --port 8001 --reload
+# Create a new terminal, launch database server
+cd backend
+uv run uvicorn main:api --port 8002 --reload
 
-Detach from tmux: press **Ctrl+B**, then **D**.
 
 Verify:
 ```bash
 curl http://localhost:8001/health   # should return {"status":"ok"}
 curl http://localhost:8002/health
 ```
-
-To reattach later: `tmux attach -t ignitive`
-To check logs: `tail -f /tmp/server.log` or `tail -f /tmp/backend.log`
 
 ---
 
@@ -117,32 +103,17 @@ VITE_USE_LOCAL_PROXY=false
 
 1. In VS Code, open the **Remote - SSH** panel and connect to your droplet
 2. Open the **Ports** tab (bottom panel)
-3. Click **"Forward a Port"** and enter `8001`
-4. Repeat for port `8002`
+3. Click **"Forward a Port"** and enter `8002`
 
-This makes `localhost:8001` and `localhost:8002` on your PC route to the droplet.
+This makes `localhost:8002` on your PC route to the droplet. The server is connected thru the subdomain.
 
 ### Step 8 — Start the Electron app
 
 ```powershell
-$env:VSCODE_DEBUG="true"; npm run dev
+npm run dev
 ```
 
-Open **`http://localhost:7777`** in your browser — the login screen should appear.
-
----
-
-## Smoke Test Checklist
-
-Open `http://localhost:7777` on your client machine and run through these:
-
-- [ ] **Login** — click "Log in", complete Google OAuth, app should show the main UI
-- [ ] **Model config** — go to Settings, add an LLM API key (e.g. OpenAI)
-- [ ] **Send a message** — type a simple prompt (e.g. "What is 2 + 2?")
-- [ ] **SSE streaming** — confirm the response streams in (token by token, not all at once)
-- [ ] **Agent activity** — confirm you see agent steps appearing (decompose, activate_agent, etc.)
-
-If all pass, Phase 1 is working end-to-end.
+Open **`http://localhost:5173`** in your browser — the login screen should appear.
 
 ---
 
@@ -150,9 +121,7 @@ If all pass, Phase 1 is working end-to-end.
 
 **Server machine (droplet):**
 ```bash
-tmux attach -t ignitive
-# Kill both processes:
-kill $(lsof -t -i:8001) $(lsof -t -i:8002)
+# kill the 2 terminals running back end + db with Ctrl+C
 docker compose -f docker-compose.dev.yml down
 ```
 
