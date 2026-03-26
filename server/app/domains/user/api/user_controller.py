@@ -30,6 +30,12 @@ from app.shared.auth.user_auth import V1UserAuth
 router = APIRouter(tags=["User"])
 
 
+@router.get("/subscription", name="get subscription")
+def get_subscription(auth: V1UserAuth = Depends(auth_must)):
+    """Stub: returns the user's current subscription plan. All users are on 'free' plan."""
+    return {"plan_key": "free", "name": "Free", "status": "active"}
+
+
 @router.get("/user", name="user info", response_model=UserOut)
 def get(db_session: Session = Depends(session), auth: V1UserAuth = Depends(auth_must)):
     user: User = auth.user

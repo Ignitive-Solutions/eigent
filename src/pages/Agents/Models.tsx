@@ -331,11 +331,13 @@ export default function SettingModels() {
         setLocalTypes(types);
         setLocalProviderIds(providerIds);
 
-        // Fetch model lists for all providers that support it
-        LOCAL_MODEL_OPTIONS.filter((m) => m.fetchPath).forEach((m) => {
-          const ep = endpoints[m.id] || m.defaultEndpoint;
-          fetchModelsForPlatform(m.id, ep);
-        });
+        // Fetch model lists for all providers that support it (skip in cloud mode — no local LLM services)
+        if (import.meta.env.VITE_USE_LOCAL_PROXY === 'true') {
+          LOCAL_MODEL_OPTIONS.filter((m) => m.fetchPath).forEach((m) => {
+            const ep = endpoints[m.id] || m.defaultEndpoint;
+            fetchModelsForPlatform(m.id, ep);
+          });
+        }
 
         // If no local providers found, initialize empty state with Ollama default
         if (localProviders.length === 0) {
