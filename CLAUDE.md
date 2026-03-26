@@ -11,7 +11,7 @@ Plan: `.claude/plans/planned-1-ignitive-saas-architecture.md`
 - Production domain: `eigent-dev.ignitive.ai`
 
 ## Dev Commands
-- Frontend: `bun install && bun run dev`
+- Frontend: `npm install && npm run dev`
 - Backend: `cd backend && uv run uvicorn main:api --reload`
 - Server: `cd server && uv run uvicorn main:app --port 8001 --reload`
 - Production stack: `docker compose -f docker-compose.prod.yml up -d`

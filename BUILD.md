@@ -4,7 +4,7 @@ Targets **eigent-dev.ignitive.ai** (cloud backend, no local Python backend bundl
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) >= 1.0 and Node.js >= 18 < 23
+- Node.js >= 18 < 23 and npm
 - macOS: Xcode Command Line Tools (code-signing)
 - Windows cross-compile from macOS/Linux: Wine + mono (native Windows recommended)
 
@@ -23,14 +23,14 @@ Do **not** modify `.env.development` (preserves local desktop dev workflow).
 ## Install & Build
 
 ```bash
-bun install
+npm install
 ```
 
 | Target | Command | Output in `release/` |
 |--------|---------|----------------------|
-| macOS | `bun run build:mac` | `Eigent-<ver>.dmg`, `Eigent-<ver>-mac.zip` |
-| Windows | `bun run build:win` | `Eigent.Setup.<ver>.exe` |
-| All platforms | `bun run build:all` | all of the above + Linux AppImage |
+| macOS | `npm run build:mac` | `Eigent-<ver>.dmg`, `Eigent-<ver>-mac.zip` |
+| Windows | `npm run build:win` | `Eigent.Setup.<ver>.exe` |
+| All platforms | `npm run build:all` | all of the above + Linux AppImage |
 
 ## Notes
 
