@@ -294,7 +294,7 @@ export const useInstallationSetup = () => {
     }) => {
       console.log('[useInstallationSetup] Backend ready event received:', data);
 
-      if (data.success && data.port) {
+      if (data.success) {
         console.log(
           `[useInstallationSetup] Backend is ready on port ${data.port}`
         );
