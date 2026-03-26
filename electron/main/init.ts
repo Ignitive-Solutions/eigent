@@ -707,7 +707,7 @@ export async function startBackend(
   // return node_process
 }
 
-function checkPortAvailable(port: number): Promise<boolean> {
+export function checkPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
 

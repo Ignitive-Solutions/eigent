@@ -40,6 +40,7 @@ import * as unzipper from 'unzipper';
 import { copyBrowserData } from './copy';
 import { FileReader } from './fileReader';
 import {
+  checkPortAvailable,
   checkToolInstalled,
   findAvailablePort,
   killProcessOnPort,
@@ -545,7 +546,18 @@ let authCallbackPort: number | null = null;
 async function startAuthCallbackServer() {
   if (authCallbackServer) return authCallbackPort;
 
-  const port = await findAvailablePort(19836, 19900);
+  // Non-destructive port scan — never kill processes (avoids killing VS Code SSH tunnels)
+  let port = 0;
+  for (let p = 19836; p <= 19900; p++) {
+    if (await checkPortAvailable(p)) {
+      port = p;
+      break;
+    }
+  }
+  if (!port) {
+    log.warn('No available port found for auth callback (19836-19900), using random port');
+    port = 0; // OS will assign a random port
+  }
 
   authCallbackServer = http.createServer((req, res) => {
     const url = new URL(req.url || '', `http://localhost:${port}`);

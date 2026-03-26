@@ -12,6 +12,7 @@ Runs PostgreSQL, Redis, the auth server, and the orchestration backend.
 
 - Docker + Docker Compose
 - Python 3.12 (server) and 3.11 (backend) via `uv`
+- tmux (`sudo apt install tmux`)
 
 ### Step 1 — Start infrastructure
 
@@ -25,18 +26,24 @@ Wait until both containers are healthy:
 docker compose -f docker-compose.dev.yml ps
 ```
 
+If the containers keep restarting, or you see "database eigent does not exist" later, reset the volumes:
+
+```bash
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up -d
+```
+
 ### Step 2 — Configure the server
 
 ```bash
 cp server/.env.example server/.env
 ```
 
-Defaults already point to `localhost:5432` and `localhost:6379`. No edits needed for local dev.
-
-The `BACKEND_URL` in `.env.example` defaults to `http://backend:8002` (Docker service name). For local dev with native processes, change it to:
-
+Edit `server/.env`:
 ```
 BACKEND_URL=http://localhost:8002
+GOOGLE_LOGIN_CLIENT_ID=<your-google-client-id>
+GOOGLE_LOGIN_CLIENT_SECRET=<your-google-client-secret>
 ```
 
 Run database migrations:
@@ -47,110 +54,95 @@ uv run alembic upgrade head
 cd ..
 ```
 
-### Step 3 — Start the server
+### Step 3 — Start server + backend in tmux
+
+Using tmux keeps them running even if your SSH session drops.
 
 ```bash
+tmux new -s ignitive
+
 cd server
-uv run uvicorn main:api --port 8001 --reload
+nohup uv run uvicorn main:api --port 8001 --reload > /tmp/server.log 2>&1 &
+cd ../backend
+nohup uv run uvicorn main:api --port 8002 --reload > /tmp/backend.log 2>&1 &
 ```
 
-Verify: `curl http://localhost:8001/health` should return `{"status":"ok"}`.
+Detach from tmux: press **Ctrl+B**, then **D**.
 
-### Step 4 — Configure and start the backend
-
+Verify:
 ```bash
-cp backend/.env.example backend/.env
+curl http://localhost:8001/health   # should return {"status":"ok"}
+curl http://localhost:8002/health
 ```
 
-Edit `backend/.env` and set:
-```
-CORS_ORIGINS=http://localhost:5173
-SERVER_URL=http://localhost:8001
-```
-
-Start the backend:
-
-```bash
-cd backend
-uv run uvicorn main:api --port 8002 --reload
-```
-
-Verify: `curl http://localhost:8002/health`
-
-No firewall changes needed — the SSH tunnel handles connectivity securely.
+To reattach later: `tmux attach -t ignitive`
+To check logs: `tail -f /tmp/server.log` or `tail -f /tmp/backend.log`
 
 ---
 
 ## Client Machine (Your PC / Windows)
 
-Runs only the React frontend dev server. No Python, no Docker needed.
+Runs the Electron app. No Python, no Docker needed.
 
 ### Prerequisites
 
 - Node.js 18–22 (includes npm) — download from https://nodejs.org
-- Git for Windows — download from https://git-scm.com
-- SSH client (included with Git for Windows, or use Windows OpenSSH)
+- VS Code with the **Remote - SSH** extension
 
 All commands below use **PowerShell**.
 
-### Step 6 — Get the source
+### Step 4 — Get the source
 
 ```powershell
 git clone <your-repo-url>
 cd eigent
 ```
 
-### Step 7 — Install dependencies
+### Step 5 — Install dependencies
 
 ```powershell
 npm install
 ```
 
-### Step 8 — Configure the frontend
+### Step 6 — Configure the frontend
 
-Open `.env.development` in Notepad or VS Code:
+Open `.env.development` in VS Code:
 
 ```
-VITE_PROXY_URL=http://localhost:8001
+VITE_PROXY_URL=https://eigent-dev.ignitive.ai
 VITE_USE_LOCAL_PROXY=false
 ```
 
-This points the frontend at `localhost:8001`, which the SSH tunnel (Step 9) will route to the droplet.
+### Step 7 — Port forwarding via VS Code
 
-### Step 9 — Create the SSH tunnel
+1. In VS Code, open the **Remote - SSH** panel and connect to your droplet
+2. Open the **Ports** tab (bottom panel)
+3. Click **"Forward a Port"** and enter `8001`
+4. Repeat for port `8002`
 
-Open a **second** PowerShell window and leave it running:
+This makes `localhost:8001` and `localhost:8002` on your PC route to the droplet.
 
-```powershell
-ssh -L 8001:localhost:8001 your-user@<your-droplet-ip> -N
-```
-
-- `-L 8001:localhost:8001` — forwards your PC's port 8001 to the droplet's port 8001
-- `-N` — no remote shell, just the tunnel
-- Keep this window open while testing
-
-### Step 10 — Start the frontend
+### Step 8 — Start the Electron app
 
 ```powershell
-npm run dev
+$env:VSCODE_DEBUG="true"; npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open **`http://localhost:7777`** in your browser — the login screen should appear.
 
 ---
 
 ## Smoke Test Checklist
 
-Open `http://localhost:5173` on your client machine and run through these:
+Open `http://localhost:7777` on your client machine and run through these:
 
-- [ ] **Register** — create a new account via the sign-up screen
-- [ ] **Login** — log in with that account
+- [ ] **Login** — click "Log in", complete Google OAuth, app should show the main UI
 - [ ] **Model config** — go to Settings, add an LLM API key (e.g. OpenAI)
 - [ ] **Send a message** — type a simple prompt (e.g. "What is 2 + 2?")
 - [ ] **SSE streaming** — confirm the response streams in (token by token, not all at once)
 - [ ] **Agent activity** — confirm you see agent steps appearing (decompose, activate_agent, etc.)
 
-If all six pass, Phase 1 is working end-to-end.
+If all pass, Phase 1 is working end-to-end.
 
 ---
 
@@ -158,8 +150,10 @@ If all six pass, Phase 1 is working end-to-end.
 
 **Server machine (droplet):**
 ```bash
+tmux attach -t ignitive
+# Kill both processes:
+kill $(lsof -t -i:8001) $(lsof -t -i:8002)
 docker compose -f docker-compose.dev.yml down
-# Kill server/backend with Ctrl+C
 ```
 
 **Client machine (Windows):**
