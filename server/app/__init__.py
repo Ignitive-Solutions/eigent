@@ -14,9 +14,10 @@
 
 from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 from fastapi_limiter import FastAPILimiter
-from app.core.environment import env_or_fail
+from app.core.environment import env_or_fail, env
 from redis import asyncio as aioredis
 import logging
 
@@ -30,9 +31,9 @@ async def lifespan(app: FastAPI):
     redis_connection = aioredis.from_url(redis_url, encoding="utf-8", decode_responses=True)
     await FastAPILimiter.init(redis_connection)
     logger.info("FastAPI Limiter initialized with Redis")
-    
+
     yield
-    
+
     # Shutdown: Close Redis connection
     await FastAPILimiter.close()
     logger.info("FastAPI Limiter closed")
@@ -43,5 +44,25 @@ api = FastAPI(
   lifespan=lifespan
 )
 add_pagination(api)
+
+# CORS: allow Electron app origins and the production web app
+_cors_origins_env = env("CORS_ORIGINS", "")
+if _cors_origins_env:
+    _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+else:
+    _cors_origins = [
+        "https://eigent-dev.ignitive.ai",
+        "app://*",
+        "file://*",
+    ]
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"http://localhost(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 router = APIRouter()
