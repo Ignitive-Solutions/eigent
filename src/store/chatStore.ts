@@ -585,12 +585,18 @@ const chatStore = (initial?: Partial<ChatStore>) =>
       const base_Url = import.meta.env.DEV
         ? import.meta.env.VITE_PROXY_URL
         : import.meta.env.VITE_BASE_URL;
+      // In cloud/proxy mode (VITE_USE_LOCAL_PROXY=false), route normal chat through
+      // the server proxy endpoint instead of the local Electron backend.
+      const useLocalProxy =
+        import.meta.env.VITE_USE_LOCAL_PROXY !== 'false';
       const api =
         type == 'share'
           ? `${base_Url}/api/v1/chat/share/playback/${shareToken}?delay_time=${delayTime}`
           : type == 'replay'
             ? `${base_Url}/api/v1/chat/steps/playback/${newTaskId}?delay_time=${delayTime}`
-            : `${baseURL}/chat`;
+            : useLocalProxy
+              ? `${baseURL}/chat`
+              : `${base_Url}/api/v1/chat/proxy/${project_id}/${newTaskId}`;
 
       const { tasks: _tasks } = get();
       let historyId: string | null = projectStore.getHistoryId(project_id);
