@@ -15,7 +15,7 @@ from starlette.responses import Response
 
 from app.core.environment import env
 from app.model.user.user import User
-from app.shared.auth.user_auth import V1UserAuth
+from app.shared.auth.user_auth import V1UserAuth, _get_jti
 from app.shared.auth.token_blacklist import is_blacklisted
 
 logger = logging.getLogger("backend_proxy")
@@ -32,6 +32,15 @@ _BACKEND_PREFIXES = (
     "/oauth",
     "/browser",
     "/linkedin",
+)
+
+# Server-only path prefixes — do NOT proxy these to the backend
+_SERVER_SKIP_PREFIXES = (
+    "/chat/histories",
+    "/chat/snapshots",
+    "/chat/steps",
+    "/chat/share",
+    "/chat/project",
 )
 
 # HTTP methods that carry a body
@@ -67,8 +76,10 @@ class BackendProxyMiddleware(BaseHTTPMiddleware):
         if not any(inner.startswith(p) for p in _BACKEND_PREFIXES):
             return await call_next(request)
 
-        # Skip the existing chat SSE proxy endpoint
-        if inner.startswith("/chat/proxy/"):
+        # Skip the existing chat SSE proxy endpoint and server-only paths
+        if inner.startswith("/chat/proxy/") or any(
+            inner.startswith(p) for p in _SERVER_SKIP_PREFIXES
+        ):
             return await call_next(request)
 
         # 1. Authenticate
@@ -83,7 +94,8 @@ class BackendProxyMiddleware(BaseHTTPMiddleware):
         token = auth_header[7:]
         try:
             auth = V1UserAuth.decode_token(token)
-            if is_blacklisted(auth.id):
+            jti = _get_jti(token)
+            if jti and await is_blacklisted(jti):
                 return Response(
                     content=b'{"detail":"Token revoked"}',
                     status_code=401,
