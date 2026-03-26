@@ -509,22 +509,27 @@ const chatStore = (initial?: Partial<ChatStore>) =>
       projectId?: string
     ) => {
       // ✅ Wait for backend to be ready before starting task (except for replay/share)
+      // Cloud mode: backend is remote, no local health check needed
       if (!type || type === 'normal') {
-        console.log('[startTask] Checking if backend is ready...');
-        const isBackendReady = await waitForBackendReady(60000, 500); // Wait up to 60 seconds
+        if (import.meta.env.VITE_USE_LOCAL_PROXY !== 'true') {
+          console.log('[startTask] Cloud mode — skipping backend health check');
+        } else {
+          console.log('[startTask] Checking if backend is ready...');
+          const isBackendReady = await waitForBackendReady(60000, 500); // Wait up to 60 seconds
 
-        if (!isBackendReady) {
-          console.error('[startTask] Backend is not ready, cannot start task');
-          const { addMessages } = get();
-          addMessages(taskId, {
-            id: generateUniqueId(),
-            role: 'agent',
-            content:
-              '❌ Backend service is not ready. Please wait a moment and try again, or restart the application if the problem persists.',
-          });
-          return;
+          if (!isBackendReady) {
+            console.error('[startTask] Backend is not ready, cannot start task');
+            const { addMessages } = get();
+            addMessages(taskId, {
+              id: generateUniqueId(),
+              role: 'agent',
+              content:
+                '❌ Backend service is not ready. Please wait a moment and try again, or restart the application if the problem persists.',
+            });
+            return;
+          }
+          console.log('[startTask] Backend is ready, proceeding with task...');
         }
-        console.log('[startTask] Backend is ready, proceeding with task...');
       }
 
       const { token, language, modelType, cloud_model_type, email } =

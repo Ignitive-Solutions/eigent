@@ -135,12 +135,18 @@ async def validate_model(request: ValidateModelRequest):
             "Starting detailed model validation",
             extra={"platform": platform, "model_type": model_type},
         )
+        model_config = request.model_config_dict or {}
+        # Anthropic requires max_tokens to be a positive integer;
+        # CAMEL passes None by default which the SDK rejects.
+        if platform == "anthropic" and not model_config.get("max_tokens"):
+            model_config["max_tokens"] = 4096
+
         validation_result = validate_model_with_details(
             platform,
             model_type,
             api_key=request.api_key,
             url=request.url,
-            model_config_dict=request.model_config_dict,
+            model_config_dict=model_config if model_config else None,
             **extra,
         )
 
