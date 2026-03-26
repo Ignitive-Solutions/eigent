@@ -12,16 +12,28 @@
 # limitations under the License.
 # ========= Copyright 2025-2026 @ Eigent.ai All Rights Reserved. =========
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI with title
 api = FastAPI(title="Eigent Multi-Agent System API")
 
-# Add CORS middleware
+# CORS: backend is internal-only; restrict to server container and localhost.
+# Override via CORS_ORIGINS env var (comma-separated) when needed.
+_cors_origins_env = os.getenv("CORS_ORIGINS", "")
+if _cors_origins_env:
+    _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+else:
+    _cors_origins = [
+        "http://server:8001",
+    ]
+
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"http://localhost(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

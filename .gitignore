@@ -39,6 +39,7 @@ yarn.lock
 .env
 .env.local
 .env.production
+!.env.production
 .env.development
 
 .cursor
@@ -66,3 +67,10 @@ storybook-static
 nul
 
 backend/benchmark/jobs/
+
+# Production deployment secrets and data volumes
+backend/.env
+server/.env
+caddy_data/
+postgres_data/
+redis_data/
