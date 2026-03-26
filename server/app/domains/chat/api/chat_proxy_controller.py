@@ -36,7 +36,7 @@ logger = logging.getLogger("chat_proxy_controller")
 router = APIRouter(prefix="/chat", tags=["Chat Proxy"])
 
 # Default backend URL — override via BACKEND_URL env var
-_DEFAULT_BACKEND_URL = "http://backend:8000"
+_DEFAULT_BACKEND_URL = "http://backend:8002"
 # Short timeout for the availability pre-check
 _PROBE_TIMEOUT = 5.0
 

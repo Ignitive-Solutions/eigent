@@ -6,14 +6,14 @@ Plan: `.claude/plans/planned-1-ignitive-saas-architecture.md`
 
 ## Architecture
 - `server/` — FastAPI: auth (JWT), PostgreSQL, Redis, Celery, trigger system. Runs on port 8001.
-- `backend/` — FastAPI: CAMEL orchestration engine (agents, SSE, tools). Internal only, port 8000.
+- `backend/` — FastAPI: CAMEL orchestration engine (agents, SSE, tools). Internal only, port 8002.
 - `src/` + `electron/` — React/Electron frontend. Proxy mode points to cloud via `VITE_PROXY_URL`.
 - Production domain: `eigent-dev.ignitive.ai`
 
 ## Dev Commands
 - Frontend: `npm install && npm run dev`
 - Backend: `cd backend && uv run uvicorn main:api --reload`
-- Server: `cd server && uv run uvicorn main:app --port 8001 --reload`
+- Server: `cd server && uv run uvicorn main:api --port 8001 --reload`
 - Production stack: `docker compose -f docker-compose.prod.yml up -d`
 
 ## Key Files
