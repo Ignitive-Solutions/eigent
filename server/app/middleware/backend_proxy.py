@@ -63,7 +63,7 @@ class BackendProxyMiddleware(BaseHTTPMiddleware):
         if not path.startswith("/api/v1/"):
             return await call_next(request)
 
-        inner = path[len("/api/v1/"):]
+        inner = path[len("/api/v1"):]
         if not any(inner.startswith(p) for p in _BACKEND_PREFIXES):
             return await call_next(request)
 

@@ -50,6 +50,10 @@ export const useInstallationSetup = () => {
 
   // Shared function to poll backend status
   const startBackendPolling = useCallback(() => {
+    // Cloud mode: no local backend to poll
+    if (import.meta.env.VITE_USE_LOCAL_PROXY !== 'true') {
+      return;
+    }
     console.log('[useInstallationSetup] Starting backend polling');
 
     // Immediately check backend status once
