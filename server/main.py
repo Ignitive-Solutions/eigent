@@ -35,11 +35,13 @@ from app.core.babel import babel_configs
 from app.core.environment import auto_include_routers, env
 from app.shared.exception.handlers import register_exception_handlers
 from app.shared.middleware import TraceIDMiddleware
+from app.middleware.backend_proxy import BackendProxyMiddleware
 from app.shared.logging import trace_filter
 
 # Register exception handlers and i18n middleware
 register_exception_handlers(api)
 api.add_middleware(BabelMiddleware, babel_configs=babel_configs)
+api.add_middleware(BackendProxyMiddleware)
 
 std_logger = logging.getLogger("server_main")
 
