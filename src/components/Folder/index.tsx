@@ -429,25 +429,9 @@ export default function Folder({ data: _data }: { data?: Agent }) {
       ) {
         tree = buildFileTree(res || []);
       } else {
-        if (!hasFetchedRemote.current) {
-          //TODO(file): rename endpoint to use project_id
-          res = await proxyFetchGet('/api/v1/chat/files', {
-            task_id: projectStore.activeProjectId as string,
-          });
-          hasFetchedRemote.current = true;
-        }
-        console.log('res', res);
-        if (res) {
-          res = res.map((item: any) => {
-            return {
-              name: item.filename,
-              type: item.filename.split('.')[1],
-              path: item.url,
-              isRemote: true,
-            };
-          });
-          tree = buildFileTree(res || []);
-        }
+        // Cloud mode: no remote file listing endpoint available.
+        // The agent can still read files via the local action bridge.
+        console.log('[Folder] No local files found, showing empty tree');
       }
       setFileTree(tree);
       // Keep the old structure for compatibility
