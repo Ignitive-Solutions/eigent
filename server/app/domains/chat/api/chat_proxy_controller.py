@@ -51,6 +51,7 @@ async def _stream_backend(
     extra_headers: dict,
 ) -> AsyncIterator[bytes]:
     """Open a streaming connection to the backend and yield raw chunks."""
+    print(f"[PROXY-DEBUG] Starting stream to {backend_chat_url}")
     try:
         async with httpx.AsyncClient(timeout=None) as client:
             async with client.stream(
@@ -59,6 +60,7 @@ async def _stream_backend(
                 content=body,
                 headers=extra_headers,
             ) as response:
+                print(f"[PROXY-DEBUG] Backend responded with status {response.status_code}")
                 if response.status_code >= 400:
                     error_event = json.dumps(
                         {
@@ -70,30 +72,20 @@ async def _stream_backend(
                     )
                     yield f"data: {error_event}\n\n".encode()
                     return
+                chunk_count = 0
                 async for chunk in response.aiter_bytes():
                     if chunk:
+                        chunk_count += 1
+                        if chunk_count <= 3:
+                            print(f"[PROXY-DEBUG] Chunk {chunk_count}: {chunk[:200]}")
                         yield chunk
-    except (httpx.ConnectError, httpx.TimeoutException) as exc:
-        logger.error(
-            "Backend unreachable during stream",
-            extra={"error": str(exc), "url": backend_chat_url},
-        )
+                print(f"[PROXY-DEBUG] Stream complete, total chunks: {chunk_count}")
+    except Exception as exc:
+        print(f"[PROXY-DEBUG] Stream error: {type(exc).__name__}: {exc}")
         error_event = json.dumps(
             {
                 "step": "error",
-                "data": {"message": "Orchestration service unavailable"},
-            }
-        )
-        yield f"data: {error_event}\n\n".encode()
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "Backend returned HTTP error during stream",
-            extra={"status_code": exc.response.status_code, "url": backend_chat_url},
-        )
-        error_event = json.dumps(
-            {
-                "step": "error",
-                "data": {"message": "Backend error"},
+                "data": {"message": f"Proxy error: {str(exc)}"},
             }
         )
         yield f"data: {error_event}\n\n".encode()
@@ -140,6 +132,10 @@ async def proxy_chat(
 
     backend_chat_url = f"{_backend_url()}/chat"
 
+    print(f"[PROXY-DEBUG] proxy_chat called: project={project_id}, task={task_id}, backend={backend_chat_url}")
+    print(f"[PROXY-DEBUG] body keys: {list(body_json.keys())}")
+    print(f"[PROXY-DEBUG] model_platform={body_json.get('model_platform')}, model_type={body_json.get('model_type')}")
+
     logger.info(
         "Proxying chat request to backend",
         extra={
@@ -147,6 +143,7 @@ async def proxy_chat(
             "task_id": task_id,
             "user_id": user.id,
             "backend_url": backend_chat_url,
+            "body_keys": list(body_json.keys()),
         },
     )
 

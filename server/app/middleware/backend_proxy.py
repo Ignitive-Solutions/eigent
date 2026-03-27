@@ -37,6 +37,7 @@ _BACKEND_PREFIXES = (
 # Server-only path prefixes — do NOT proxy these to the backend
 _SERVER_SKIP_PREFIXES = (
     "/chat/histories",
+    "/chat/history",
     "/chat/snapshots",
     "/chat/steps",
     "/chat/share",

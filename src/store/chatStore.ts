@@ -805,10 +805,8 @@ const chatStore = (initial?: Partial<ChatStore>) =>
         signal: abortController.signal, // Add abort signal for proper cleanup
         headers: {
           'Content-Type': 'application/json',
-          Authorization:
-            type == 'replay'
-              ? `Bearer ${token}`
-              : (undefined as unknown as string),
+          // In cloud mode, proxy requires auth for all chat types
+          Authorization: `Bearer ${token}`,
         },
         body: !type
           ? JSON.stringify({
