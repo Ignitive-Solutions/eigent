@@ -22,6 +22,7 @@ from app.agent.prompt import DOCUMENT_SYS_PROMPT
 from app.agent.toolkit.excel_toolkit import ExcelToolkit
 from app.agent.toolkit.file_write_toolkit import FileToolkit
 from app.agent.toolkit.google_drive_mcp_toolkit import GoogleDriveMCPToolkit
+from app.agent.toolkit.local_action_toolkit import LocalActionToolkit
 from app.agent.toolkit.human_toolkit import HumanToolkit
 from app.agent.toolkit.markitdown_toolkit import MarkItDownToolkit
 
@@ -126,6 +127,13 @@ async def document_agent(options: Chat):
         *skill_toolkit.get_tools(),
         *search_tools,
     ]
+
+    # In cloud mode, add local action toolkit so the agent can read files
+    # on the user's machine via the WebSocket bridge.
+    if options.is_cloud():
+        local_action_toolkit = LocalActionToolkit(options.project_id)
+        tools.extend(local_action_toolkit.get_tools())
+
     system_message = DOCUMENT_SYS_PROMPT.format(
         platform_system=platform.system(),
         platform_machine=platform.machine(),

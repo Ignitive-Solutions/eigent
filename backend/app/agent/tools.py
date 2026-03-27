@@ -23,6 +23,7 @@ from app.agent.toolkit.audio_analysis_toolkit import AudioAnalysisToolkit
 from app.agent.toolkit.excel_toolkit import ExcelToolkit
 from app.agent.toolkit.file_write_toolkit import FileToolkit
 from app.agent.toolkit.github_toolkit import GithubToolkit
+from app.agent.toolkit.local_action_toolkit import LocalActionToolkit
 from app.agent.toolkit.google_calendar_toolkit import GoogleCalendarToolkit
 from app.agent.toolkit.google_drive_mcp_toolkit import GoogleDriveMCPToolkit
 from app.agent.toolkit.google_gmail_mcp_toolkit import GoogleGmailMCPToolkit
@@ -57,6 +58,7 @@ async def get_toolkits(tools: list[str], agent_name: str, api_task_id: str):
         "openai_image_toolkit": OpenAIImageToolkit,
         "excel_toolkit": ExcelToolkit,
         "file_write_toolkit": FileToolkit,
+        "local_action_toolkit": LocalActionToolkit,
         "github_toolkit": GithubToolkit,
         "google_calendar_toolkit": GoogleCalendarToolkit,
         "google_drive_mcp_toolkit": GoogleDriveMCPToolkit,

@@ -44,11 +44,14 @@ class RedisSessionManager:
         self.PENDING_PREFIX = "ws:pending:"
         self.PUBSUB_CHANNEL = "ws:executions"
         self.DELIVERY_CONFIRMATION_PREFIX = "ws:delivery:"
-        
+        self.TOOL_RESPONSE_PREFIX = "ws:tool_response:"
+
         # TTL for sessions (24 hours)
         self.SESSION_TTL = 86400
         # TTL for delivery confirmations (5 minutes)
         self.DELIVERY_TTL = 300
+        # TTL for tool responses (60 seconds)
+        self.TOOL_RESPONSE_TTL = 60
         
         # Pub/Sub
         self._pubsub = None
@@ -396,6 +399,99 @@ class RedisSessionManager:
             })
             return False
     
+    def publish_tool_request(
+        self,
+        request_id: str,
+        user_id: str,
+        action: str,
+        params: Dict[str, Any],
+    ) -> bool:
+        """Publish a local-action tool request to the user's WebSocket client(s).
+
+        Args:
+            request_id: Unique ID for request/response correlation
+            user_id: User whose client should handle this request
+            action: Whitelisted action name (e.g. "list_files")
+            params: Action-specific parameters
+
+        Returns:
+            True if published, False otherwise
+        """
+        event_data = {
+            "type": "tool_request",
+            "request_id": request_id,
+            "user_id": user_id,
+            "action": action,
+            "params": params,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        return self.publish_execution_event(event_data)
+
+    async def wait_for_tool_response(
+        self,
+        request_id: str,
+        timeout: float = 30.0,
+        poll_interval: float = 0.1,
+    ) -> Optional[Dict[str, Any]]:
+        """Wait for a tool response from the WebSocket client.
+
+        Args:
+            request_id: Request ID to wait for
+            timeout: Maximum time to wait in seconds
+            poll_interval: Time between Redis checks
+
+        Returns:
+            Response dict with 'success', 'result'/'error', or None on timeout
+        """
+        response_key = f"{self.TOOL_RESPONSE_PREFIX}{request_id}"
+        elapsed = 0.0
+
+        while elapsed < timeout:
+            try:
+                data = self.client.get(response_key)
+                if data:
+                    self.client.delete(response_key)
+                    return json.loads(data)
+            except Exception as e:
+                logger.error("Error checking tool response", extra={
+                    "request_id": request_id,
+                    "error": str(e),
+                })
+
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+        logger.warning("Tool response timeout", extra={
+            "request_id": request_id,
+            "timeout": timeout,
+        })
+        return None
+
+    def store_tool_response(self, request_id: str, response_data: Dict[str, Any]) -> bool:
+        """Store a tool response from the WebSocket client.
+
+        Args:
+            request_id: Request ID this response correlates to
+            response_data: Dict with 'success', 'result'/'error'
+
+        Returns:
+            True if stored, False otherwise
+        """
+        try:
+            response_key = f"{self.TOOL_RESPONSE_PREFIX}{request_id}"
+            self.client.setex(
+                response_key,
+                self.TOOL_RESPONSE_TTL,
+                json.dumps(response_data),
+            )
+            return True
+        except Exception as e:
+            logger.error("Failed to store tool response", extra={
+                "request_id": request_id,
+                "error": str(e),
+            }, exc_info=True)
+            return False
+
     def close(self):
         """Close Redis connection."""
         if self._pubsub:

@@ -323,6 +323,20 @@ async def subscribe_executions(websocket: WebSocket):
                             "user_id": str(user_id),
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
+
+                    elif msg.get("type") == "tool_response":
+                        request_id = msg.get("request_id")
+                        if request_id:
+                            redis_manager.store_tool_response(request_id, {
+                                "success": msg.get("success", False),
+                                "result": msg.get("result"),
+                                "error": msg.get("error"),
+                            })
+                            logger.info("Tool response received", extra={
+                                "session_id": session_id,
+                                "request_id": request_id,
+                                "success": msg.get("success"),
+                            })
                         
                 except WebSocketDisconnect:
                     break

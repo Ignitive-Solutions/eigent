@@ -18,6 +18,7 @@ import { ActivityType, useActivityLogStore } from '@/store/activityLogStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTriggerStore } from '@/store/triggerStore';
 import { ExecutionStatus, ExecutionType, TriggerType } from '@/types';
+import { useLocalActionHandler } from '@/hooks/useLocalActionHandler';
 import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -97,6 +98,16 @@ interface PongMessage {
   type: 'pong';
 }
 
+interface ToolRequestMessage {
+  type: 'tool_request';
+  request_id: string;
+  action: string;
+  params: Record<string, any>;
+  user_id: string;
+  project_id?: string;
+  timestamp: string;
+}
+
 type WebSocketMessage =
   | ExecutionCreatedMessage
   | ExecutionUpdatedMessage
@@ -106,7 +117,8 @@ type WebSocketMessage =
   | ConnectedMessage
   | HeartbeatMessage
   | ErrorMessage
-  | PongMessage;
+  | PongMessage
+  | ToolRequestMessage;
 
 /**
  * Hook for subscribing to trigger execution events via WebSocket
@@ -134,6 +146,7 @@ export function useExecutionSubscription(enabled: boolean = true) {
     setLastPongTimestamp,
     setWsReconnectCallback,
   } = useTriggerStore();
+  const { handleToolRequest } = useLocalActionHandler(wsRef);
 
   // Store latest values in refs to avoid recreating connect function
   const triggersRef = useRef(triggers);
@@ -409,6 +422,10 @@ export function useExecutionSubscription(enabled: boolean = true) {
               }
               setLastPongTimestampRef.current(Date.now());
               setWsConnectionStatusRef.current('connected');
+              break;
+
+            case 'tool_request':
+              handleToolRequest(message as ToolRequestMessage);
               break;
 
             case 'error':
