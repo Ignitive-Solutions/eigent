@@ -432,6 +432,7 @@ export default function Folder({ data: _data }: { data?: Agent }) {
         // Cloud mode: no remote file listing endpoint available.
         // The agent can still read files via the local action bridge.
         console.log('[Folder] No local files found, showing empty tree');
+        tree = { name: 'root', path: '', children: [], isFolder: true };
       }
       setFileTree(tree);
       // Keep the old structure for compatibility
